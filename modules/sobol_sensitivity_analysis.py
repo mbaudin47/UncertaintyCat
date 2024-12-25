@@ -124,11 +124,11 @@ def sobol_sensitivity_analysis(N, model, problem, model_code_str, language_model
     S1_interval = sensitivityAnalysis.getFirstOrderIndicesInterval()
     lower_bound = S1_interval.getLowerBound()
     upper_bound = S1_interval.getUpperBound()
-    S1_conf = [upper_bound[i] - lower_bound[i] for i in range(dimension)]
+    S1_conf = [(upper_bound[i] - lower_bound[i]) / 2.0 for i in range(dimension)]
     ST_interval = sensitivityAnalysis.getTotalOrderIndicesInterval()
     lower_bound = ST_interval.getLowerBound()
     upper_bound = ST_interval.getUpperBound()
-    ST_conf = [upper_bound[i] - lower_bound[i] for i in range(dimension)]
+    ST_conf = [(upper_bound[i] - lower_bound[i]) / 2.0 for i in range(dimension)]
 
     # Perform Sobol analysis
     Si = {
