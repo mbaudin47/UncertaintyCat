@@ -8,6 +8,8 @@ from math import pi
 from modules.api_utils import call_groq_api
 from modules.common_prompt import RETURN_INSTRUCTION
 from modules.statistical_utils import get_bounds_for_salib
+import openturns as ot
+from modules.openturns_utils import get_ot_distribution, get_ot_model, ot_point_to_list
 
 
 
@@ -90,7 +92,6 @@ def plot_sobol_radial(Si, problem, ax):
     ax.set_title("Sobol Indices Radial Plot")
 
 
-
 def sobol_sensitivity_analysis(N, model, problem, model_code_str, language_model='groq'):
     # Ensure N is a power of 2
     N_power = int(np.ceil(np.log2(N)))
@@ -102,11 +103,52 @@ def sobol_sensitivity_analysis(N, model, problem, model_code_str, language_model
     # Generate samples using Sobol' sequence
     param_values = sobol.sample(problem_for_salib, N, calc_second_order=True)
 
-    # Evaluate the model
-    Y = np.array([model(X) for X in param_values]).flatten()
+    # Get the input distribution and the model
+    distribution = get_ot_distribution(problem)
+    model_g = get_ot_model(model, problem)
+
+    # Compute indices
+    computeSecondOrder = True
+    sie = ot.SobolIndicesExperiment(distribution, N, computeSecondOrder)
+    inputDesignSobol = sie.generate()
+    inputNames = distribution.getDescription()
+    inputDesignSobol.setDescription(inputNames)
+    inputDesignSobol.getSize()
+    outputDesignSobol = model_g(inputDesignSobol)
+
+    # %%
+    sensitivityAnalysis = ot.SaltelliSensitivityAlgorithm(
+        inputDesignSobol, outputDesignSobol, N
+    )
+    conf_level = 0.95
+    sensitivityAnalysis.setConfidenceLevel(conf_level)
+    S1 = sensitivityAnalysis.getFirstOrderIndices()
+    ST = sensitivityAnalysis.getTotalOrderIndices()
+    S2 = sensitivityAnalysis.getSecondOrderIndices()
+    S1 = ot_point_to_list(S1)
+    ST = ot_point_to_list(ST)
+    S2 = np.array(S2)
+    # Confidence intervals
+    dimension = distribution.getDimension()
+    S1_interval = sensitivityAnalysis.getFirstOrderIndicesInterval()
+    lower_bound = S1_interval.getLowerBound()
+    upper_bound = S1_interval.getUpperBound()
+    S1_conf = [upper_bound[i] - lower_bound[i] for i in range(dimension)]
+    ST_interval = sensitivityAnalysis.getTotalOrderIndicesInterval()
+    lower_bound = ST_interval.getLowerBound()
+    upper_bound = ST_interval.getUpperBound()
+    ST_conf = [upper_bound[i] - lower_bound[i] for i in range(dimension)]
 
     # Perform Sobol analysis
-    Si = sobol_analyze.analyze(problem_for_salib, Y, calc_second_order=True, print_to_console=False)
+    Si = {
+        "S1": S1,
+        "ST": ST,
+        "S2": S2,
+        "S1_conf": S1_conf,
+        "ST_conf": ST_conf,
+    }
+    print("Si =")
+    print(Si)
 
     # Create DataFrame for indices
     Si_filter = {k: Si[k] for k in ['ST', 'ST_conf', 'S1', 'S1_conf']}
