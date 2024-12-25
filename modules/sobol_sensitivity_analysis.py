@@ -1,13 +1,10 @@
 import numpy as np
 import pandas as pd
 import matplotlib.pyplot as plt
-from SALib.sample import sobol
-from SALib.analyze import sobol as sobol_analyze
 import streamlit as st  # Added import statement
 from math import pi
 from modules.api_utils import call_groq_api
 from modules.common_prompt import RETURN_INSTRUCTION
-from modules.statistical_utils import get_bounds_for_salib
 import openturns as ot
 from modules.openturns_utils import get_ot_distribution, get_ot_model, ot_point_to_list
 
@@ -96,12 +93,6 @@ def sobol_sensitivity_analysis(N, model, problem, model_code_str, language_model
     # Ensure N is a power of 2
     N_power = int(np.ceil(np.log2(N)))
     N = int(2 ** N_power)
-
-    # Generate bounds for SALib
-    problem_for_salib = get_bounds_for_salib(problem)
-
-    # Generate samples using Sobol' sequence
-    param_values = sobol.sample(problem_for_salib, N, calc_second_order=True)
 
     # Get the input distribution and the model
     distribution = get_ot_distribution(problem)
