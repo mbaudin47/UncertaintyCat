@@ -89,7 +89,8 @@ def plot_sobol_radial(Si, problem, ax):
     ax.set_title("Sobol Indices Radial Plot")
 
 
-def sobol_sensitivity_analysis(N, model, problem, model_code_str, language_model='groq'):
+def sobol_sensitivity_analysis(N, model, problem, model_code_str, language_model='groq',
+                               confidence_level = 0.95):
     # Ensure N is a power of 2
     N_power = int(np.ceil(np.log2(N)))
     N = int(2 ** N_power)
@@ -111,8 +112,7 @@ def sobol_sensitivity_analysis(N, model, problem, model_code_str, language_model
     sensitivityAnalysis = ot.SaltelliSensitivityAlgorithm(
         inputDesignSobol, outputDesignSobol, N
     )
-    conf_level = 0.95
-    sensitivityAnalysis.setConfidenceLevel(conf_level)
+    sensitivityAnalysis.setConfidenceLevel(confidence_level)
     S1 = sensitivityAnalysis.getFirstOrderIndices()
     ST = sensitivityAnalysis.getTotalOrderIndices()
     S2 = sensitivityAnalysis.getSecondOrderIndices()
@@ -138,8 +138,6 @@ def sobol_sensitivity_analysis(N, model, problem, model_code_str, language_model
         "S1_conf": S1_conf,
         "ST_conf": ST_conf,
     }
-    print("Si =")
-    print(Si)
 
     # Create DataFrame for indices
     Si_filter = {k: Si[k] for k in ['ST', 'ST_conf', 'S1', 'S1_conf']}
@@ -196,8 +194,6 @@ def sobol_sensitivity_analysis(N, model, problem, model_code_str, language_model
     S2_df = pd.DataFrame(S2_indices)
 
     # Convert DataFrames to Markdown tables
-    first_order_md_table = first_order_df.to_markdown(index=False, floatfmt=".4f")
-    total_order_md_table = total_order_df.to_markdown(index=False, floatfmt=".4f")
     if not S2_df.empty:
         second_order_md_table = S2_df
     else:
